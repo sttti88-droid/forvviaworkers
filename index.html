@@ -32,7 +32,11 @@
     <div id="p1" class="page"><h2 class="section-header">Growth Path</h2><div id="pathContainer"></div></div>
 
     <div id="p2" class="page">
-        <h2 class="section-header">Journal</h2>
+        <div class="text-center my-8">
+            <i class="fa-solid fa-leaf text-[#8E7E6E] text-3xl mb-2 opacity-80"></i>
+            <h2 class="section-header" style="margin-top: 0;">Journal</h2>
+            <p class="text-[10px] text-[#C4B5A5] tracking-widest">靈魂的自然回聲與覺察</p>
+        </div>
         <div id="tagContainer" class="flex flex-wrap gap-2 mb-4 justify-center"></div>
         <div id="guideContainer" class="p-4 bg-[#F4F1ED] rounded-xl text-xs italic mb-4 text-center border border-[#EAE6E1]">點選上方標籤查看覺察指引...</div>
         <div class="glass">
@@ -43,16 +47,30 @@
             </div>
             <img id="imgPreview" class="hidden w-full h-32 object-cover rounded-lg mb-2">
             <audio id="audioPlayback" controls class="hidden w-full mb-2"></audio>
-            <button onclick="addJournal()" class="w-full bg-[#8E7E6E] text-white py-2 rounded-lg text-xs font-bold">儲存日記</button>
+            <button onclick="addJournal()" class="w-full bg-[#8E7E6E] text-white py-3 rounded-lg text-xs font-bold shadow-md hover:bg-[#7a6d60] transition-all">
+                <i class="fa-solid fa-feather-pointed mr-2"></i> 封存覺察
+            </button>
         </div>
         <div id="journalList"></div>
     </div>
 
-    <nav class="fixed bottom-0 w-full max-w-[450px] bg-[#F8F5F2] border-t h-20 flex items-center justify-around z-50">
-        <button onclick="go(0)" class="text-xs font-bold">儀式</button><button onclick="go(1)" class="text-xs font-bold">路徑</button><button onclick="go(2)" class="text-xs font-bold">手帳</button>
+    <nav class="fixed bottom-0 w-full max-w-[450px] bg-[#F8F5F2] border-t border-[#EAE6E1] h-20 flex items-center justify-around z-50 shadow-[0_-5px_15px_rgba(142,126,110,0.05)]">
+        <button onclick="go(0)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] transition-all active:scale-90">
+            <i class="fa-solid fa-sun text-lg mb-1"></i>
+            <span class="text-[9px] font-bold tracking-wider">儀式</span>
+        </button>
+        <button onclick="go(1)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] transition-all active:scale-90">
+            <i class="fa-solid fa-compass text-lg mb-1"></i>
+            <span class="text-[9px] font-bold tracking-wider">路徑</span>
+        </button>
+        <button onclick="go(2)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] transition-all active:scale-90">
+            <i class="fa-solid fa-book-sparkles text-lg mb-1"></i>
+            <span class="text-[9px] font-bold tracking-wider">手帳</span>
+        </button>
     </nav>
 
 <script>
+    // 資料區
     const data = {
         aff: ["我是豐盛的磁鐵。", "我充滿愛與溫柔。", "我擁抱每個契機。", "困難使我強大。", "我準備好迎接最棒的一天。", "我的行動帶有意圖。", "我歡迎所有的豐盛。", "我對自己充滿信心。", "我保持平靜專注。", "每一刻都是新的開始。"],
         reset: [{t: "「今天會是美好的一天。」", n: "開啟大腦的「機會掃描器」。"}, {t: "「今天會有酷的事情發生在我身上。」", n: "開啟大腦的「機會掃描器」。"}, {t: "「無論今天發生什麼，我都能應對。」", n: "對抗失控的焦慮。"}, {t: "「今天是我生命中令人興奮的新篇章。」", n: "擁抱新開端。"}, {t: "「對於自己的努力，我值得更多的肯定。」", n: "給予自己慈悲。"}, {t: "「我被允許成為一個『正在進步中』的人。」", n: "放下完美主義。"}, {t: "「只要我持續出現，生命就會回饋我。」", n: "長期主義價值。"}, {t: "「我對這個世界有著重要的貢獻。」", n: "肯定自我價值。"}],
@@ -66,7 +84,6 @@
         ]
     };
 
-    // 邏輯處理 (保持不變以確保穩固)
     let journals = JSON.parse(localStorage.getItem('mia_journals')) || [];
     let mediaRecorder, audioChunks = [];
     
@@ -107,7 +124,7 @@
     function go(i) { document.querySelectorAll('.page').forEach((p, idx) => p.classList.toggle('active', i === idx)); }
     function updateAffirmation() { document.getElementById('dailyAffirmation').innerText = data.aff[Math.floor(Math.random() * data.aff.length)]; }
 
-    // 初始化內容
+    // 初始化數據綁定
     document.getElementById('tagContainer').innerHTML = Object.keys(data.guide).map(k => 
         `<button class="px-3 py-1 border rounded-full text-[10px] text-[#8E7E6E] bg-white" onclick="document.getElementById('guideContainer').innerHTML='${data.guide[k].map(q => '• ' + q).join('<br>')}'">${k}</button>`
     ).join('');
