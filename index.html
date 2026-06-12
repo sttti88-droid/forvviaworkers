@@ -17,7 +17,9 @@
         .task-row { cursor: pointer; padding: 12px 0; border-bottom: 1px solid #F4F1ED; font-size: 13px; }
         .task-row.done { opacity: 0.4; text-decoration: line-through; }
         .num-btn { width: 45px; height: 45px; background: #EAE6E1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
-        .media-btn { background: #F4F1ED; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; display: inline-block; }
+        /* 刪除彈窗風格 */
+        #confirmOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 10000; align-items: center; justify-content: center; }
+        .confirm-box { background: #FFFFFF; padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 300px; border: 1px solid #EAE6E1; }
     </style>
 </head>
 <body class="max-w-[450px] mx-auto pb-24">
@@ -33,98 +35,92 @@
 
     <div id="p2" class="page">
         <div class="text-center my-8">
-            <i class="fa-solid fa-leaf text-[#8E7E6E] text-3xl mb-2 opacity-80"></i>
-            <h2 class="section-header" style="margin-top: 0;">Journal</h2>
+            <h2 class="section-header">Journal</h2>
             <p class="text-[10px] text-[#C4B5A5] tracking-widest">靈魂的自然回聲與覺察</p>
         </div>
         <div id="tagContainer" class="flex flex-wrap gap-2 mb-4 justify-center"></div>
         <div id="guideContainer" class="p-4 bg-[#F4F1ED] rounded-xl text-xs italic mb-4 text-center border border-[#EAE6E1]">點選上方標籤查看覺察指引...</div>
         <div class="glass">
             <textarea id="journalArea" class="w-full h-24 p-2 text-sm border-none bg-transparent" placeholder="記錄當下覺察..."></textarea>
-            <div class="flex gap-2 mb-4">
-                <label class="media-btn"><i class="fa-solid fa-image"></i> 圖片<input type="file" id="imgInput" class="hidden" accept="image/*" onchange="previewImg(event)"></label>
-                <button id="micBtn" class="media-btn" onclick="toggleRecord()"><i class="fa-solid fa-microphone"></i> 錄音</button>
-            </div>
-            <img id="imgPreview" class="hidden w-full h-32 object-cover rounded-lg mb-2">
-            <audio id="audioPlayback" controls class="hidden w-full mb-2"></audio>
-            <button onclick="addJournal()" class="w-full bg-[#8E7E6E] text-white py-3 rounded-lg text-xs font-bold shadow-md hover:bg-[#7a6d60] transition-all">
-                <i class="fa-solid fa-feather-pointed mr-2"></i> 封存覺察
-            </button>
+            <button onclick="addJournal()" class="w-full bg-[#8E7E6E] text-white py-3 rounded-lg text-xs font-bold mt-2">封存覺察</button>
         </div>
         <div id="journalList"></div>
     </div>
 
-     <nav class="fixed bottom-0 w-full max-w-[450px] bg-[#F8F5F2] border-t border-[#EAE6E1] h-20 flex items-center justify-around z-50">
-        <button onclick="go(0)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] active:scale-90"><i class="fa-solid fa-sun text-lg"></i><span class="text-[9px] font-bold">儀式</span></button>
-        <button onclick="go(1)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] active:scale-90"><i class="fa-solid fa-compass text-lg"></i><span class="text-[9px] font-bold">路徑</span></button>
-        <button onclick="go(2)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E] active:scale-90"><i class="fa-solid fa-book-open text-lg"></i><span class="text-[9px] font-bold">手帳</span></button>
+    <nav class="fixed bottom-0 w-full max-w-[450px] bg-[#F8F5F2] border-t border-[#EAE6E1] h-20 flex items-center justify-around z-50">
+        <button onclick="go(0)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E]"><i class="fa-solid fa-sun text-lg"></i><span class="text-[9px] font-bold">儀式</span></button>
+        <button onclick="go(1)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E]"><i class="fa-solid fa-compass text-lg"></i><span class="text-[9px] font-bold">路徑</span></button>
+        <button onclick="go(2)" class="flex flex-col items-center justify-center w-full h-full text-[#8E7E6E]"><i class="fa-solid fa-book-open text-lg"></i><span class="text-[9px] font-bold">手帳</span></button>
     </nav>
 
+    <div id="confirmOverlay">
+        <div class="confirm-box">
+            <p class="text-sm text-[#8E7E6E] mb-6 font-bold">確認要封存這篇覺察嗎？<br>此操作無法復原。</p>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('confirmOverlay').style.display='none'" class="flex-1 py-2 text-xs text-gray-400">取消</button>
+                <button onclick="confirmDelete()" class="flex-1 py-2 text-xs bg-[#8E7E6E] text-white rounded-lg">確認刪除</button>
+            </div>
+        </div>
+    </div>
 
-<script>
-    // 資料區
-    const data = {
-        aff: ["我是豐盛的磁鐵。", "我充滿愛與溫柔。", "我擁抱每個契機。", "困難使我強大。", "我準備好迎接最棒的一天。", "我的行動帶有意圖。", "我歡迎所有的豐盛。", "我對自己充滿信心。", "我保持平靜專注。", "每一刻都是新的開始。"],
-        reset: [{t: "「今天會是美好的一天。」", n: "開啟大腦的「機會掃描器」。"}, {t: "「今天會有酷的事情發生在我身上。」", n: "開啟大腦的「機會掃描器」。"}, {t: "「無論今天發生什麼，我都能應對。」", n: "對抗失控的焦慮。"}, {t: "「今天是我生命中令人興奮的新篇章。」", n: "擁抱新開端。"}, {t: "「對於自己的努力，我值得更多的肯定。」", n: "給予自己慈悲。"}, {t: "「我被允許成為一個『正在進步中』的人。」", n: "放下完美主義。"}, {t: "「只要我持續出現，生命就會回饋我。」", n: "長期主義價值。"}, {t: "「我對這個世界有著重要的貢獻。」", n: "肯定自我價值。"}],
-        rit: {"1": "【1號領航者】聚焦本質，踏出第一步。", "2": "【2號連結者】創造流動，傾聽與平衡。", "3": "【3號表達者】大膽表達，創意自由流露。", "4": "【4號穩固者】建立秩序，搭建具體架構。", "5": "【5號探險者】擁抱未知，在多變中看見機會。", "6": "【6號守護者】療癒彼此，用同理心照顧連結。", "7": "【7號觀察者】深入內在，在寧靜中聆聽指引。", "8": "【8號顯化者】發揮力量，將願景轉化為豐盛。", "9": "【9號圓滿者】釋放過去，清空羈絆迎接更新。"},
-        guide: { "身體感官": ["今天身體哪裡感覺舒適？", "是否有感謝美味的食物？", "感謝自己能自由移動的時刻。"], "自我成長": ["今天克服了什麼小困難？", "哪一刻感到更靠近真實自己？", "是否有展現勇氣的瞬間？"], "關係連結": ["有人對你溫暖微笑嗎？", "今天是否學會設定界線？", "為別人做了一件什麼事？"], "環境機緣": ["生活中出現什麼小巧合？", "環境中哪裡讓你感到安全？", "宇宙給了你什麼靈感？"] },
-        path: [
-            {t: "【覺察之眼】觀照日常的細微變動", d: "視覺、減壓與自我觀察。", items: [{n: "視覺碎形化", s: "換一條路走，拍下美學細節。"}, {n: "數位減壓", s: "1 小時飛航模式。"}, {n: "窒息點紀錄", s: "紀錄焦慮時刻身體反應。"}, {n: "原形冒險", s: "嘗試未吃過的蔬果。"}, {n: "童心拾遺", s: "給小物件賦予故事。"}, {n: "抽離練習", s: "旁觀者觀察對話。"}, {n: "視覺排版", s: "整理桌面角落。"}]},
-            {t: "【實驗之場】重塑感官與生命節奏", d: "生理、飲食與日常節奏。", items: [{n: "糖分斷捨離", s: "不喝含糖飲料。"}, {n: "血糖與情緒", s: "紀錄血糖與情緒波動。"}, {n: "藍光斷電", s: "睡前關閉螢幕。"}, {n: "動態冥想", s: "走路時練習深呼吸。"}, {n: "精準補水", s: "每小時喝水 200ml。"}, {n: "優雅說不", s: "拒絕非必要的邀約。"}, {n: "抗炎美學", s: "準備含薑黃的餐點。"}]},
-            {t: "【定義之鑰】描繪靈魂的願景藍圖", d: "價值觀與未來劇本。", items: [{n: "亮點掃描", s: "找出成就時刻。"}, {n: "無限制假設", s: "發掘熱情。"}, {n: "靈數對話", s: "與自己對話。"}, {n: "他人之鏡", s: "優點清單。"}, {n: "提案思維", s: "改善方案。"}, {n: "靈感寶庫", s: "心動句子。"}, {n: "三年劇本", s: "理想生活。"}, {n: "撕掉標籤", s: "刪除限制。"}]},
-            {t: "【實踐之流】將願景化為具體顯化", d: "行動、財務與生活連結。", items: [{n: "勇敢發聲", s: "表達觀點。"}, {n: "職能重構", s: "核心優勢。"}, {n: "浪漫儀式", s: "買一束花。"}, {n: "財務目標", s: "儲蓄目標。"}, {n: "跨界連結", s: "交流。"}, {n: "碎片冒險", s: "改變順序。"}, {n: "實驗結案", s: "總結。"}, {n: "重新定義", s: "信念。"} ]}
-        ]
-    };
+    <script>
+        const data = {
+            aff: ["我是豐盛的磁鐵。", "我充滿愛與溫柔。", "我擁抱每個契機。", "困難使我強大。", "我準備好迎接最棒的一天。", "我的行動帶有意圖。", "我歡迎所有的豐盛。", "我對自己充滿信心。", "我保持平靜專注。", "每一刻都是新的開始。", "我值得被愛。", "宇宙支持我的決定。", "我放下對未知的恐懼。", "我吸引快樂的人事物。", "我是自己人生的設計師。", "我的身體充滿活力。", "我散發自信的能量。", "我感謝所有的經歷。", "我選擇寬恕與釋放。", "我與富足的頻率對齊。", "我擁有創造奇蹟的能力。", "我的每一個靈感都極具價值。", "我對生命充滿好奇。", "我值得擁有高品質的生活。", "我的直覺精準無比。", "我讓生命自然流動。", "我是被光包圍的。", "我展現出最真實的自己。", "我克服了內在的限制。", "我的未來是明亮的。", "我現在正走在成功的路上。", "我對自己的進步感到驕傲。", "我與宇宙的力量合一。", "我能輕鬆應對改變。", "我的心是溫暖的港灣。", "我吸引貴人來幫助我。", "我讓每一天都有意義。", "我的專注力能解決問題。", "我欣賞自己的獨特之處。", "我創造屬於我的財富。", "我勇於嘗試未知。", "我對當下的每一秒負責。", "我擁有平靜的內在空間。", "我接納生活的起伏。", "我讓愛在心中循環。", "我具備解決一切的能力。", "我的生活簡單而富足。", "我對未來充滿期待。", "我值得擁有美好的獎勵。", "我用積極回應一切。", "我擁有無限的可能性。", "我放下過往的包袱。", "我專注在正確的事物上。", "我的潛力正在覺醒。", "我吸引正向的環境。", "我感謝生命中的每個挑戰。", "我與自己的靈魂深度連結。", "我選擇在困難中看見機會。", "我的生命充滿喜悅。", "我對自己的決定充滿力量。", "我信任生命的節奏。", "我擁有卓越的執行力。", "我與自然的頻率同步。", "我展現自信的風采。", "我對周遭懷有善意。", "我放下對結果的執著。", "我的靈魂是自由的。", "我值得被溫柔對待。", "我正一步步成為理想中的自己。", "我的勇氣能衝破障礙。", "我讓生活充滿創意。", "我對每一次的成長致敬。", "我擁有清晰的思考邏輯。", "我吸引同頻的人才。", "我感謝每一份收穫。", "我讓能量在體內自由流動。", "我對自己的進化感到興奮。", "我是宇宙的一份光亮。", "我接納所有的不完美。", "我擁有強大的適應力。", "我把每天當成禮物。", "我專注於當下的喜樂。", "我選擇成為快樂的源頭。", "我擁有平靜且堅定的信念。", "我對人生充滿熱情。", "我吸引源源不絕的靈感。", "我感謝宇宙的引導。", "我讓自己活在光中。", "我擁有處理事務的智慧。", "我對自己的生活感到滿足。", "我是一個圓滿的存在。", "我擁抱成長的痛苦與喜悅。", "我的願景正在實現。", "我對這個世界帶來影響。", "我保持謙卑與學習。", "我放下他人的評判。", "我堅定地走在使命中。", "我擁有無限的豐盛。", "我愛現在的自己。", "我已準備好，進入下一個階段。"],
+            reset: [{t: "「今天會是美好的一天。」", n: "開啟大腦的機會掃描器。"}, {t: "「今天會有酷的事情發生在我身上。」", n: "開啟大腦的機會掃描器。"}, {t: "「無論今天發生什麼，我都能應對。」", n: "對抗失控的焦慮。"}, {t: "「今天是我生命中令人興奮的新篇章。」", n: "擁抱新開端。"}, {t: "「對於自己的努力，我值得更多的肯定。」", n: "給予自己慈悲。"}, {t: "「我被允許成為一個『正在進步中』的人。」", n: "放下完美主義。"}, {t: "「只要我持續出現，生命就會回饋我。」", n: "長期主義價值。"}, {t: "「我對這個世界有著重要的貢獻。」", n: "肯定自我價值。"}],
+            rit: {"1": "【1號領航者】聚焦本質，踏出第一步。", "2": "【2號連結者】創造流動，傾聽與平衡。", "3": "【3號表達者】大膽表達，創意自由流露。", "4": "【4號穩固者】建立秩序，搭建具體架構。", "5": "【5號探險者】擁抱未知，在多變中看見機會。", "6": "【6號守護者】療癒彼此，用同理心照顧連結。", "7": "【7號觀察者】深入內在，在寧靜中聆聽指引。", "8": "【8號顯化者】發揮力量，將願景轉化為豐盛。", "9": "【9號圓滿者】釋放過去，清空羈絆迎接更新。"},
+            guide: { "身體感官": ["今天身體哪裡感覺舒適？", "是否有感謝美味的食物？", "感謝自己能自由移動的時刻。"], "自我成長": ["今天克服了什麼小困難？", "哪一刻感到更靠近真實自己？", "是否有展現勇氣的瞬間？"], "關係連結": ["有人對你溫暖微笑嗎？", "今天是否學會設定界線？", "為別人做了一件什麼事？"], "環境機緣": ["生活中出現什麼小巧合？", "環境中哪裡讓你感到安全？", "宇宙給了你什麼靈感？"] },
+            path: [{t: "【覺察之眼】", d: "觀照日常的細微變動", items: [{n: "視覺碎形化", s: "換一條沒走過的路回家，拍下 3 個平常沒注意的美學細節。"}, {n: "數位減壓", s: "關閉螢幕 1 小時，只聽音樂或發呆，紀錄大腦的聲音。"}, {n: "窒息點紀錄", s: "寫下今天讓你感到最焦慮的一個瞬間，並分析那個「發炎源」。"}, {n: "原形冒險", s: " 吃一種從未嘗試過的原形食物，感受身體最直觀的反饋。"}, {n: "童心拾遺", s: "找回一件小時候喜歡、長大後卻弄丟的愛好（例如畫畫、玩水）。"}, {n: "抽離練習", s: "遇到奧客或不順心的事，試著用「第三人稱」觀察對方的穿搭或配色。"}, {n: "視覺排版", s: "整理你的工作桌面，丟掉 3 件代表「過去沉重感」的雜物。"}]}, {t: "【實驗之場】", d: "重塑感官與生命節奏", items: [{n: "糖分斷捨離", s: " 挑戰整天「無糖」。下午三點的腦霧狀況有改善嗎？"}, {n: "血糖與情緒", s: "記錄飯後一小時的心情。你是真的累，還是血糖在震盪？"}, {n: "藍光斷電", s: "睡前兩小時收起手機，讀一本關於浪漫或自我探索的書。"}, {n: "動態冥想", s: "騎車或走路時，專注於呼吸，把通勤變成一場身體旅行。"}, {n: "精準補水", s: "每小時喝水 200ml。"}, {n: "優雅說不", s: "練習拒絕一個消耗你能量的邀約。保護你的邊界感。"}, {n: "抗炎美學", s: "親手做一頓色彩豐富的低 GI 餐，這是一場對身體的投資。"}]}, {t: "【定義之鑰】", d: "描繪靈魂的願景藍圖", items: [{n: "亮點掃描", s: "回想去年最讓你發光的 3 個時刻，背後的共通點是什麼？"}, {n: "無限制假設", s: "如果金錢與年齡不是問題，你現在最想做哪件事？"}, {n: "靈數對話", s: "研究你的 5 號人特質。哪一部分的你，一直被社會標籤壓抑？"}, {n: "他人之鏡", s: "詢問 3 位好友：你身上有什麼別人學不走的「閃光點」？"}, {n: "提案思維", s: "把今天最討厭的雜事當成一個「設計案」，你會怎麼優化它？"}, {n: "靈感寶庫", s: "在網路上收集 10 張代表「自由、發光、質感」的意象圖。"}, {n: "三年劇本", s: "寫下三年後的早晨。你在哪裡醒來？聞到什麼味道？"}, {n: "撕掉標籤", s: "寫下一個你不想要的標籤（如：爆肝、聽話），然後在心理刪除它。"}]}, {t: "【實踐之流】", d: "將願景化為具體顯化", items: [{n: "勇敢發聲", s: "在社群或對身邊的人分享一個你對自由的真實看法。"}, {n: "職能重構", s: "思考如何結合你的「美感專業」與「健康事業」。"}, {n: "浪漫儀式", s: "為一件日常琐事（如洗澡、工作開機）設計一個高級的儀式。"}, {n: "財務目標", s: "設定你的月入 ＿＿ 萬目標，列出 3 個可以執行的微型副業。（Alan的目標是15萬前進中）"}, {n: "跨界連結", s: "主動傳訊息給一位你很欣賞、但沒聊過的創作者。"}, {n: "碎片冒險", s: "去一個從未去過的行政區或咖啡廳工作，觀察新環境。"}, {n: "實驗結案", s: "檢視這 28 天。身體的發炎感減少了嗎？眼神變亮了嗎？"}, {n: "重新定義", s: "正式宣告你的新身分。現在的你，是誰？"}]}]
+        };
 
-    let journals = JSON.parse(localStorage.getItem('mia_journals')) || [];
-    let mediaRecorder, audioChunks = [];
-    
-    function addJournal() {
-        const text = document.getElementById('journalArea').value;
-        if (!text) return;
-        const entry = { id: Date.now(), text, date: new Date().toLocaleString(), img: document.getElementById('imgPreview').src, audio: document.getElementById('audioPlayback').src };
-        journals.unshift(entry); saveAndRender();
-        document.getElementById('journalArea').value = ""; document.getElementById('imgPreview').classList.add('hidden'); document.getElementById('audioPlayback').classList.add('hidden');
-    }
-    function deleteJournal(id) { if(confirm("確定要刪除這篇日記嗎？")) { journals = journals.filter(j => j.id !== id); saveAndRender(); } }
-    function saveAndRender() { localStorage.setItem('mia_journals', JSON.stringify(journals)); renderJournals(); }
-    function renderJournals() {
-        document.getElementById('journalList').innerHTML = journals.map(j => `
-            <div class="glass">
-                <div class="flex justify-between items-start mb-2"><span class="text-[10px] text-[#C4B5A5]">${j.date}</span><button onclick="deleteJournal(${j.id})" class="text-red-300"><i class="fa-solid fa-trash"></i></button></div>
-                <div class="text-sm mb-2">${j.text}</div>
-                ${j.img.startsWith('data:') ? `<img src="${j.img}" class="w-full h-24 object-cover rounded mb-2">` : ''}
-                ${j.audio.startsWith('blob:') ? `<audio src="${j.audio}" controls class="w-full"></audio>` : ''}
-            </div>`).join('');
-    }
-    async function toggleRecord() {
-        const btn = document.getElementById('micBtn');
-        if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(audioChunks, { type: 'audio/wav' });
-                document.getElementById('audioPlayback').src = URL.createObjectURL(blob);
-                document.getElementById('audioPlayback').classList.remove('hidden');
-                audioChunks = [];
-            };
-            mediaRecorder.start(); btn.innerText = "停止錄音";
-        } else { mediaRecorder.stop(); btn.innerText = "錄音"; }
-    }
-    function previewImg(e) { const reader = new FileReader(); reader.onload = (e) => { document.getElementById('imgPreview').src = e.target.result; document.getElementById('imgPreview').classList.remove('hidden'); }; reader.readAsDataURL(e.target.files[0]); }
-    function go(i) { document.querySelectorAll('.page').forEach((p, idx) => p.classList.toggle('active', i === idx)); }
-    function updateAffirmation() { document.getElementById('dailyAffirmation').innerText = data.aff[Math.floor(Math.random() * data.aff.length)]; }
+        let journals = JSON.parse(localStorage.getItem('mia_journals') || '[]');
+        let journalToDelete = null;
 
-    // 初始化數據綁定
-    document.getElementById('tagContainer').innerHTML = Object.keys(data.guide).map(k => 
-        `<button class="px-3 py-1 border rounded-full text-[10px] text-[#8E7E6E] bg-white" onclick="document.getElementById('guideContainer').innerHTML='${data.guide[k].map(q => '• ' + q).join('<br>')}'">${k}</button>`
-    ).join('');
-    document.getElementById('resetList').innerHTML = data.reset.map(s => `<p><strong>${s.t}</strong><br><span class="text-[10px] text-gray-400">${s.n}</span></p>`).join('');
-    document.getElementById('numGrid').innerHTML = Object.keys(data.rit).map(n => `<div class="num-btn" onclick="document.getElementById('ritualDisplayArea').innerText='${data.rit[n]}'">0${n}</div>`).join('');
-    document.getElementById('pathContainer').innerHTML = data.path.map(s => `<div class="glass"><h4 class="sub-header">${s.t}</h4><p class="text-[10px] text-gray-400 mb-2 italic">${s.d}</p>${s.items.map(it => `<div class="task-row" onclick="this.classList.toggle('done')"><strong>${it.n}</strong>: <span class="text-gray-500">${it.s}</span></div>`).join('')}</div>`).join('');
-    renderJournals();
-    updateAffirmation();
-</script>
+        function addJournal() {
+            const area = document.getElementById('journalArea');
+            if (!area.value.trim()) return;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            journals.unshift({ id: Date.now(), text: area.value, date: dateStr });
+            localStorage.setItem('mia_journals', JSON.stringify(journals));
+            area.value = "";
+            renderJournals();
+        }
+
+        function deleteJournal(id) {
+            journalToDelete = id;
+            document.getElementById('confirmOverlay').style.display = 'flex';
+        }
+
+        function confirmDelete() {
+            journals = journals.filter(j => j.id !== journalToDelete);
+            localStorage.setItem('mia_journals', JSON.stringify(journals));
+            document.getElementById('confirmOverlay').style.display = 'none';
+            renderJournals();
+        }
+
+        function renderJournals() {
+            document.getElementById('journalList').innerHTML = journals.map(j => `
+                <div class="glass relative">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] text-[#C4B5A5] uppercase tracking-widest">${j.date}</span>
+                        <button onclick="deleteJournal(${j.id})" class="text-[#C4B5A5] hover:text-red-400"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="text-sm italic text-[#5D5246]">${j.text.replace(/\n/g, '<br>')}</div>
+                </div>
+            `).join('');
+        }
+
+        function go(i) { document.querySelectorAll('.page').forEach((p, idx) => p.classList.toggle('active', i === idx)); }
+        function updateAffirmation() { document.getElementById('dailyAffirmation').innerText = data.aff[Math.floor(Math.random() * data.aff.length)]; }
+
+        // 初始化渲染
+        document.getElementById('resetList').innerHTML = data.reset.map(s => `<p><strong>${s.t}</strong><br><span class="text-[10px] text-gray-400">${s.n}</span></p>`).join('');
+        document.getElementById('numGrid').innerHTML = Object.keys(data.rit).map(n => `<div class="num-btn" onclick="document.getElementById('ritualDisplayArea').innerText='${data.rit[n]}'">0${n}</div>`).join('');
+        document.getElementById('pathContainer').innerHTML = data.path.map(s => `<div class="glass"><h4 class="sub-header">${s.t}</h4><p class="text-[10px] text-gray-400 mb-2 italic">${s.d}</p>${s.items.map(it => `<div class="task-row" onclick="this.classList.toggle('done')"><strong>${it.n}</strong>: <span class="text-gray-500">${it.s}</span></div>`).join('')}</div>`).join('');
+        document.getElementById('tagContainer').innerHTML = Object.keys(data.guide).map(k => `<button class="px-3 py-1 border rounded-full text-[10px] text-[#8E7E6E] bg-white" onclick="document.getElementById('guideContainer').innerHTML='${data.guide[k].map(q => '• ' + q).join('<br>')}'">${k}</button>`).join('');
+        
+        renderJournals();
+        updateAffirmation();
+    </script>
 </body>
 </html>
